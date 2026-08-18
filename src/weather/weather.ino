@@ -1,23 +1,40 @@
+/**
+   @file weather.ino
+
+   @brief control OLED, sensors, and button
+*/
+
+/*
+
+   Button Wiring:
+   3v3 -> Button Leads 1
+   GND -> Resistor -> Button Leads 2 -> Input pin
+
+*/
+
+#include "Arduino.h"
+#include "esp32-hal-gpio.h"
 
 constexpr byte LED_PIN = 2;
 constexpr byte BUTTON_PIN = 4;
 constexpr byte SDA_PIN = 21;
 constexpr byte SCL_PIN = 22;
 
+
 // Declare task handle
 TaskHandle_t BlinkTaskHandle = NULL;
 
+/**
+   @brief toggle LED when button is pressed
+*/
 void BlinkTask(void *parameter) {
-  for (;;) { // Infinite loop
-    digitalWrite(LED_PIN, HIGH);
-    Serial.println("BlinkTask: LED ON");
-    vTaskDelay(1000 / portTICK_PERIOD_MS); // 1000ms
-    digitalWrite(LED_PIN, LOW);
-    Serial.println("BlinkTask: LED OFF");
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
-    Serial.print("BlinkTask running on core ");
-    Serial.println(xPortGetCoreID());
-  }
+   constexpr uint8_t buttonDebounceDelay = 1000;
+   for (;;) { // Infinite loop
+      if (HIGH == digitalRead(BUTTON_PIN)) {
+         digitalWrite(LED_PIN, !digitalRead(LED_PIN));
+      }
+      vTaskDelay(buttonDebounceDelay / portTICK_PERIOD_MS);
+   }
 }
 
 void setup() {
@@ -38,5 +55,5 @@ void setup() {
 }
 
 void loop() {
-  // Empty because FreeRTOS scheduler runs the task
+   // Empty because FreeRTOS scheduler runs the task
 }
