@@ -1,0 +1,19 @@
+profiles:
+  esp32:
+    fqbn: esp32:esp32:esp32:UploadSpeed=921600,CPUFreq=240,FlashFreq=80,FlashMode=qio,FlashSize=4M,PartitionScheme=default,DebugLevel=none,PSRAM=disabled,LoopCore=1,EventsCore=1,EraseFlash=none,JTAGAdapter=default,ZigbeeMode=default
+    platforms:
+      - platform: esp32:esp32 (3.3.8)
+    programmer: ""
+    port: COM12
+    port_config:
+      baudrate: "115200"
+      lineEnding: "\r\n"
+      bits: "8"
+      parity: none
+      stop_bits: one
+    libraries:
+      - DHT11 (2.1.0)
+      - WiFi (1.2.7)
+      - Adafruit SSD1306 (2.5.17)
+      - Adafruit GFX Library (1.12.6)
+      - Adafruit BusIO (1.17.4)
