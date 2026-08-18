@@ -1,5 +1,8 @@
 
-#define LED_PIN 2
+constexpr byte LED_PIN = 2;
+constexpr byte BUTTON_PIN = 4;
+constexpr byte SDA_PIN = 21;
+constexpr byte SCL_PIN = 22;
 
 // Declare task handle
 TaskHandle_t BlinkTaskHandle = NULL;
@@ -21,6 +24,7 @@ void setup() {
   Serial.begin(115200);
   
   pinMode(LED_PIN, OUTPUT);
+  pinMode(BUTTON_PIN, INPUT);
 
   xTaskCreatePinnedToCore(
     BlinkTask,         // Task function
