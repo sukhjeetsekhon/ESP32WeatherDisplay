@@ -24,6 +24,7 @@
 #include "credentials.h"
 #include <WiFi.h>
 #include "DHT.h"
+#include "Queue.h"
 
 typedef uint16_t DHTSizeType;
 
@@ -255,11 +256,13 @@ TaskHandle_t WiFiTaskHandle = NULL;
 void WiFiTask(void *parameter) {
    WiFi.disconnect(); // clear any previous WiFi connections
    WiFi.mode(WIFI_STA); // ESP32 only connects to WiFi
+
    if (WL_CONNECTED == WiFi.begin(WIFI_SSID, WIFI_PASSWORD)) {
       Serial.println(F("WiFi Connected!"));
    } else {
-       Serial.println(F("WiFi Idle..."));
+      Serial.println(F("WiFi Idle..."));
    }
+
    while (WL_CONNECTED != WiFi.status()) {
       Serial.println(F("WiFi Connecting..."));
       vTaskDelay(1000 / portTICK_PERIOD_MS);
@@ -269,7 +272,7 @@ void WiFiTask(void *parameter) {
    vTaskSuspend(WiFiTaskHandle);
 
    // TODO: add reconnection logic later
-   
+
    for (;;) {
 
    }
