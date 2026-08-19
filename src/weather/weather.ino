@@ -18,6 +18,11 @@
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
+// #include <Adafruit_BusIO.h>
+#include <Adafruit_I2CDevice.h>
+#include "displayHelpers.h"
+#include "math.h"
+
 #include "DHT.h"
 
 typedef uint16_t DHTSizeType;
@@ -90,6 +95,12 @@ void DisplayTask(void *parameter) {
 
       display.print(displayNumber);
       displayNumber++;
+
+      // draw WiFi Signal icon
+      display.fillCircle(64, 52, 3, SSD1306_WHITE);
+      drawArc(display, 64, 52, 12, 225, 315, 3);
+      drawArc(display, 64, 52, 20, 225, 315, 3);
+      drawArc(display, 64, 52, 28, 225, 315, 3);
 
       display.display();
 
