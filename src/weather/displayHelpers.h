@@ -1,3 +1,6 @@
+#ifndef DISPLAY_HELPERS_H
+#define DISPLAY_HELPERS_H
+
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
@@ -29,3 +32,5 @@ void drawArc(
    float angleEnd,
    unsigned int thickness
 );
+
+#endif /* DISPLAY_HELPERS_H */

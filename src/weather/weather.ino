@@ -18,11 +18,11 @@
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
-// #include <Adafruit_BusIO.h>
 #include <Adafruit_I2CDevice.h>
 #include "displayHelpers.h"
 #include "math.h"
-
+#include "credentials.h"
+#include <WiFi.h>
 #include "DHT.h"
 
 typedef uint16_t DHTSizeType;
@@ -247,6 +247,35 @@ void DHTTask(void *parameter) {
    }
 }
 
+TaskHandle_t WiFiTaskHandle = NULL;
+
+/**
+   @brief Set WiFi Mode and connect to WiFi, then suspend task once connected
+*/
+void WiFiTask(void *parameter) {
+   WiFi.disconnect(); // clear any previous WiFi connections
+   WiFi.mode(WIFI_STA); // ESP32 only connects to WiFi
+   if (WL_CONNECTED == WiFi.begin(WIFI_SSID, WIFI_PASSWORD)) {
+      Serial.println(F("WiFi Connected!"));
+   } else {
+       Serial.println(F("WiFi Idle..."));
+   }
+   while (WL_CONNECTED != WiFi.status()) {
+      Serial.println(F("WiFi Connecting..."));
+      vTaskDelay(1000 / portTICK_PERIOD_MS);
+   }
+   Serial.println(F("WiFi Connected!"));
+
+   vTaskSuspend(WiFiTaskHandle);
+
+   // TODO: add reconnection logic later
+   
+   for (;;) {
+
+   }
+
+}
+
 void setup() {
   Serial.begin(115200);
   
@@ -279,6 +308,15 @@ void setup() {
     NULL,              // Parameters
     1,                 // Priority
     &DHTTaskHandle,  // Task handle
+    1                  // Core 1
+  );
+  xTaskCreatePinnedToCore(
+    WiFiTask,         // Task function
+    "WiFiTask",       // Task name
+    10000,             // Stack size (bytes)
+    NULL,              // Parameters
+    1,                 // Priority
+    &WiFiTaskHandle,  // Task handle
     1                  // Core 1
   );
 }
