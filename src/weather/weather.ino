@@ -32,27 +32,56 @@
 
 typedef uint16_t DHTSizeType;
 
+constexpr float IMPOSSIBLE_TEMPERATURE = 200;
+constexpr float IMPOSSIBLE_HUMIDITY = 101;
+
 constexpr byte LED_PIN = 2;
 constexpr byte BUTTON_PIN = 4;
 
 #define DHT_TYPE DHT11   // DHT 11
 constexpr byte DHT_PIN = 5;
 
+#define USE_FAHRENHEIT true // must be a define to use #if
+constexpr DHTSizeType DHT_QUEUE_SIZE = 100; // a larger size will change the average values more slowly and stabilize output measurements
+
+float DHT_temperature = IMPOSSIBLE_TEMPERATURE;
+float DHT_relativeHumidity = IMPOSSIBLE_HUMIDITY;
+float DHT_heatIndex = IMPOSSIBLE_TEMPERATURE;
+
+Queue<float> temperatureData(DHT_QUEUE_SIZE);
+Queue<float> relativeHumidityData(DHT_QUEUE_SIZE);
+Queue<float> heatIndexData(DHT_QUEUE_SIZE);
+
 constexpr byte SDA_PIN = 21;
 constexpr byte SCL_PIN = 22;
 
-constexpr int API_CALL_DELAY = 15000;
+constexpr unsigned int API_CALL_DELAY = 60000;
+constexpr unsigned int DISPLAY_REFRESH_DELAY = 1000;
+constexpr unsigned int DHT_UPDATE_DELAY = 2000;
 
-constexpr float IMPOSSIBLE_TEMPERATURE = 200;
-constexpr float IMPOSSIBLE_HUMIDITY = 101;
 
 volatile float currentTemperature = IMPOSSIBLE_TEMPERATURE; // impossible value to check
 volatile float currentRelativeHumidity = IMPOSSIBLE_HUMIDITY; // impossible value to check
+
+enum DisplayPage {
+   startup, // TODO: show a logo and title
+   wifiConnection, // TODO: make it show signal strength
+   currentWeather, // TODO: show basic temperature and humidity with icons
+   sensorData, // TODO: show sensor temperature and humidity data
+   sensorDataGraph // TODO: show sensor data over time
+};
+
+volatile DisplayPage currentPage = startup;
 
 volatile bool isButtonPressed = false;
 
 void toggleButtonState() {
    isButtonPressed = !isButtonPressed;
+   if (currentPage == sensorDataGraph) {
+      currentPage = wifiConnection;
+   } else {
+      currentPage = static_cast<DisplayPage>(static_cast<int>(currentPage) + 1);
+   }
 }
 
 TaskHandle_t BlinkTaskHandle = NULL;
@@ -92,6 +121,8 @@ void DisplayTask(void *parameter) {
    vTaskDelay(200 / portTICK_PERIOD_MS);
    display.clearDisplay();
 
+   currentPage = wifiConnection;
+
    while (WL_CONNECTED != WiFi.status()) {
       display.clearDisplay();
       display.fillCircle(64, 52, 3, SSD1306_WHITE);
@@ -125,6 +156,8 @@ void DisplayTask(void *parameter) {
 
    display.display();
 
+   currentPage = currentWeather;
+
    while (
       currentTemperature == IMPOSSIBLE_TEMPERATURE 
       || currentRelativeHumidity == IMPOSSIBLE_HUMIDITY
@@ -134,23 +167,136 @@ void DisplayTask(void *parameter) {
 
    for(;;) {
       display.clearDisplay();
-      display.setTextSize(1);      // Normal 1:1 pixel scale
-      display.setTextColor(WHITE); // Draw white text
-      display.setCursor(0, 0);     // Start at top-left corner
 
+      switch (currentPage) {
+         case startup:
+            currentPage = wifiConnection;
+            break;
+         case wifiConnection:
+            if (WL_CONNECTED == WiFi.status()) {
+               // draw circle for WiFi signal icon
+               display.fillCircle(64, 52, 3, SSD1306_WHITE);
+               // draw solid WiFi signal
+               // small arc
+               drawArc(display, 64, 52, 12, 225, 315, 3);
+               // medium arc
+               drawArc(display, 64, 52, 20, 225, 315, 3);
+               // big arc
+               drawArc(display, 64, 52, 28, 225, 315, 3);
+            } else {
+               if (wifiCounter > 2) {
+                  wifiCounter = 0;
+               }
+               switch(wifiCounter) {
+                  case 2:
+                     drawArc(display, 64, 52, 28, 225, 315, 3);
+                  case 1:
+                     drawArc(display, 64, 52, 20, 225, 315, 3);
+                  case 0:
+                     drawArc(display, 64, 52, 12, 225, 315, 3);
+               }
+               wifiCounter++;
+            }
+            break;
+         case sensorData:
+            display.setTextSize(1);      // Normal 1:1 pixel scale
+            display.setTextColor(WHITE); // Draw white text
+            display.setCursor(0, 0);     // Start at top-left corner
 
-      display.print("Current Temp: ");
-      display.print(currentTemperature);
-      display.println("F");
+            display.print(F("Current Temp: "));
+            display.print(DHT_temperature);
 
-      display.print("Current RH: ");
-      display.print(currentRelativeHumidity);
-      display.println("%");
+            Serial.print(F("Current Temperature: "));
+            Serial.print(DHT_temperature);
+            #if USE_FAHRENHEIT == true
+               Serial.println("F");
+               display.println("F");
+            #else
+               Serial.println("C");
+               display.println("C");
+            #endif
+
+            display.print(F("Avg Temp: "));
+            display.print(temperatureData.calculateAverage());
+
+            Serial.print(F("Average Temperature: "));
+            Serial.print(temperatureData.calculateAverage());
+            #if USE_FAHRENHEIT == true
+               Serial.println("F");
+               display.println("F");
+            #else
+               Serial.println("C");
+               display.println("C");
+            #endif
+
+            display.print(F("Humidity: "));
+            display.print(DHT_relativeHumidity);
+            display.println("%");
+
+            Serial.print(F("Current Relative Humidity: "));
+            Serial.print(DHT_relativeHumidity);
+            Serial.println("%");
+
+            display.print(F("Avg Humidity: "));
+            display.print(relativeHumidityData.calculateAverage());
+            display.println("%");
+
+            Serial.print(F("Average Relative Humidity: "));
+            Serial.print(relativeHumidityData.calculateAverage());
+            Serial.println("%");
+
+            display.print(F("Heat Index: "));
+            display.print(DHT_heatIndex);
+
+            Serial.print(F("Current Heat Index: "));
+            Serial.print(DHT_heatIndex);
+            #if USE_FAHRENHEIT == true
+               Serial.println("F");
+               display.println("F");
+            #else
+               Serial.println("C");
+               display.println("C");
+            #endif
+
+            display.print(F("Avg Heat Idx: "));
+            display.print(heatIndexData.calculateAverage());
+
+            Serial.print(F("Average Heat Index: "));
+            Serial.print(heatIndexData.calculateAverage());
+            #if USE_FAHRENHEIT == true
+               Serial.println("F");
+               display.println("F");
+            #else
+               Serial.println("C");
+               display.println("C");
+            #endif
+            break;
+         case sensorDataGraph:
+            display.setTextSize(1);      // Normal 1:1 pixel scale
+            display.setTextColor(WHITE); // Draw white text
+            display.setCursor(0, 0);     // Start at top-left corner
+            display.println("TODO: make graph :P");
+            break;
+         case currentWeather:
+            display.setTextSize(1);      // Normal 1:1 pixel scale
+            display.setTextColor(WHITE); // Draw white text
+            display.setCursor(0, 0);     // Start at top-left corner
+            display.print(F("Current Temp: "));
+            display.print(currentTemperature);
+            display.println("F");
+
+            display.print(F("Current RH: "));
+            display.print(currentRelativeHumidity);
+            display.println("%");
+            break;
+         
+      }
+      
       
 
       display.display();
 
-      vTaskDelay(API_CALL_DELAY / portTICK_PERIOD_MS);
+      vTaskDelay(DISPLAY_REFRESH_DELAY / portTICK_PERIOD_MS);
    }
 }
 
@@ -158,96 +304,45 @@ TaskHandle_t DHTTaskHandle = NULL;
 
 void DHTTask(void *parameter) {
    
-   #define USE_FAHRENHEIT true
-   constexpr DHTSizeType DHT_QUEUE_SIZE = 100; // a larger size will change the average values more slowly and stabilize output measurements
-
+   
    DHT dht(DHT_PIN, DHT_TYPE);
 
    dht.begin();
 
    DHTSizeType bufferIndex = 0;
 
-   float temperature = dht.readTemperature(USE_FAHRENHEIT);
-   Queue<float> temperatureData(DHT_QUEUE_SIZE);
+   DHT_temperature = dht.readTemperature(USE_FAHRENHEIT);
 
-   float relativeHumidity = dht.readHumidity();
-   Queue<float> relativeHumidityData(DHT_QUEUE_SIZE);
+   DHT_relativeHumidity = dht.readHumidity();
 
-   float heatIndex = dht.computeHeatIndex(
-      temperature, 
-      relativeHumidity, 
+   DHT_heatIndex = dht.computeHeatIndex(
+      DHT_temperature, 
+      DHT_relativeHumidity, 
       USE_FAHRENHEIT
    );
-   Queue<float> heatIndexData(DHT_QUEUE_SIZE);
 
 
-   if (isnan(temperature) || isnan(relativeHumidity) || isnan(heatIndex)) {
+   if (isnan(DHT_temperature) || isnan(DHT_relativeHumidity) || isnan(DHT_heatIndex)) {
       Serial.println(F("Failed to read from DHT sensor!"));
       vTaskSuspend(DHTTaskHandle);
    }
 
    for (;;) {
 
+      DHT_temperature = dht.readTemperature(USE_FAHRENHEIT);
+      DHT_relativeHumidity = dht.readHumidity();
+      DHT_heatIndex = dht.computeHeatIndex(
+         DHT_temperature, 
+         DHT_relativeHumidity, 
+         USE_FAHRENHEIT
+      );
+
+      temperatureData.push(DHT_temperature);
+      relativeHumidityData.push(DHT_relativeHumidity);
+      heatIndexData.push(DHT_heatIndex);
+
+      vTaskDelay(DHT_UPDATE_DELAY / portTICK_PERIOD_MS);
    }
-
-   // for (;;) {
-
-   //    // TODO: refactor DHT into another class
-
-   //    temperature = dht.readTemperature(USE_FAHRENHEIT);
-   //    relativeHumidity = dht.readHumidity();
-   //    heatIndex = dht.computeHeatIndex(
-   //       temperature, 
-   //       relativeHumidity, 
-   //       USE_FAHRENHEIT
-   //    );
-
-   //    temperatureData.push(temperature);
-   //    relativeHumidityData.push(relativeHumidity);
-   //    heatIndexData.push(heatIndex);
-
-   //    Serial.print("Current Temperature: ");
-   //    Serial.print(temperature);
-   //    #if USE_FAHRENHEIT == true
-   //       Serial.println("F");
-   //    #else
-   //       Serial.println("C");
-   //    #endif
-
-   //    Serial.print("Average Temperature: ");
-   //    Serial.print(temperatureData.calculateAverage());
-   //    #if USE_FAHRENHEIT == true
-   //       Serial.println("F");
-   //    #else
-   //       Serial.println("C");
-   //    #endif
-
-   //    Serial.print("Current Relative Humidity: ");
-   //    Serial.print(relativeHumidity);
-   //    Serial.println("%");
-
-   //    Serial.print("Average Relative Humidity: ");
-   //    Serial.print(relativeHumidityData.calculateAverage());
-   //    Serial.println("%");
-
-   //    Serial.print("Current Heat Index: ");
-   //    Serial.print(heatIndex);
-   //    #if USE_FAHRENHEIT == true
-   //       Serial.println("F");
-   //    #else
-   //       Serial.println("C");
-   //    #endif
-
-   //    Serial.print("Average Heat Index: ");
-   //    Serial.print(heatIndexData.calculateAverage());
-   //    #if USE_FAHRENHEIT == true
-   //       Serial.println("F");
-   //    #else
-   //       Serial.println("C");
-   //    #endif
-
-   //    vTaskDelay(1000 / portTICK_PERIOD_MS);
-   // }
 }
 
 TaskHandle_t WiFiTaskHandle = NULL;
