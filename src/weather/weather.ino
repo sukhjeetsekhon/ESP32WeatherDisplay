@@ -114,7 +114,7 @@ TaskHandle_t DHTTaskHandle = NULL;
 void DHTTask(void *parameter) {
    
    #define USE_FAHRENHEIT true
-   constexpr DHTSizeType DHT_BUFFER_SIZE = 100; // a larger size will change the average values more slowly and stabilize output measurements
+   constexpr DHTSizeType DHT_QUEUE_SIZE = 100; // a larger size will change the average values more slowly and stabilize output measurements
 
    DHT dht(DHT_PIN, DHT_TYPE);
 
@@ -123,23 +123,18 @@ void DHTTask(void *parameter) {
    DHTSizeType bufferIndex = 0;
 
    float temperature = dht.readTemperature(USE_FAHRENHEIT);
-   float averageTemperature = 0;
-   float temperatureBuffer[DHT_BUFFER_SIZE] = {0};
-   DHTSizeType numValidTemperature = 0;
+   Queue<float> temperatureData(DHT_QUEUE_SIZE);
 
    float relativeHumidity = dht.readHumidity();
-   float averageRelativeHumidity = 0;
-   float relativeHumidityBuffer[DHT_BUFFER_SIZE] = {0};
-   DHTSizeType numValidRelativeHumidity = 0;
+   Queue<float> relativeHumidityData(DHT_QUEUE_SIZE);
 
    float heatIndex = dht.computeHeatIndex(
       temperature, 
       relativeHumidity, 
       USE_FAHRENHEIT
    );
-   float averageHeatIndex = 0;
-   float heatIndexBuffer[DHT_BUFFER_SIZE] = {0};
-   DHTSizeType numValidHeatIndex = 0;
+   Queue<float> heatIndexData(DHT_QUEUE_SIZE);
+
 
    if (isnan(temperature) || isnan(relativeHumidity) || isnan(heatIndex)) {
       Serial.println(F("Failed to read from DHT sensor!"));
@@ -148,60 +143,22 @@ void DHTTask(void *parameter) {
 
    for (;;) {
 
-      // TODO: the average value calculations are complicated and bulky. Either refactor or forget about it.
-
+      // TODO: refactor DHT into another class
+      
       temperature = dht.readTemperature(USE_FAHRENHEIT);
-      averageTemperature = 0;
-
       relativeHumidity = dht.readHumidity();
-      averageRelativeHumidity = 0;
-
       heatIndex = dht.computeHeatIndex(
          temperature, 
          relativeHumidity, 
          USE_FAHRENHEIT
       );
-      averageHeatIndex = 0;
 
-      if (bufferIndex > DHT_BUFFER_SIZE - 1) {
-         bufferIndex = 0;
-      }
-
-      numValidTemperature = 0;
-      numValidRelativeHumidity = 0;
-      numValidHeatIndex = 0;
-
-      for (int i = 0; i < DHT_BUFFER_SIZE; i++) {
-         if (0 == temperatureBuffer[i] || isnan(temperatureBuffer[i])) {
-            continue;
-         }
-         numValidTemperature++;
-         averageTemperature += temperatureBuffer[i];
-      }
-
-      for (int i = 0; i < DHT_BUFFER_SIZE; i++) {
-         if (0 == relativeHumidityBuffer[i] || isnan(relativeHumidityBuffer[i])) {
-            continue;
-         }
-         numValidRelativeHumidity++;
-         averageRelativeHumidity += relativeHumidityBuffer[i];
-      }
-
-      for (int i = 0; i < DHT_BUFFER_SIZE; i++) {
-         if (0 == heatIndexBuffer[i] || isnan(heatIndexBuffer[i])) {
-            continue;
-         }
-         numValidHeatIndex++;
-         averageHeatIndex += heatIndexBuffer[i];
-      }
-
-      averageTemperature /= numValidTemperature;
-      averageRelativeHumidity /= numValidRelativeHumidity;
-      averageHeatIndex /= numValidHeatIndex;
+      temperatureData.push(temperature);
+      relativeHumidityData.push(relativeHumidity);
+      heatIndexData.push(heatIndex);
 
       Serial.print("Current Temperature: ");
       Serial.print(temperature);
-      temperatureBuffer[bufferIndex] = temperature;
       #if USE_FAHRENHEIT == true
          Serial.println("F");
       #else
@@ -209,7 +166,7 @@ void DHTTask(void *parameter) {
       #endif
 
       Serial.print("Average Temperature: ");
-      Serial.print(averageTemperature);
+      Serial.print(temperatureData.calculateAverage());
       #if USE_FAHRENHEIT == true
          Serial.println("F");
       #else
@@ -218,16 +175,14 @@ void DHTTask(void *parameter) {
 
       Serial.print("Current Relative Humidity: ");
       Serial.print(relativeHumidity);
-      relativeHumidityBuffer[bufferIndex] = relativeHumidity;
       Serial.println("%");
 
       Serial.print("Average Relative Humidity: ");
-      Serial.print(averageRelativeHumidity);
+      Serial.print(relativeHumidityData.calculateAverage());
       Serial.println("%");
 
       Serial.print("Current Heat Index: ");
       Serial.print(heatIndex);
-      heatIndexBuffer[bufferIndex] = heatIndex;
       #if USE_FAHRENHEIT == true
          Serial.println("F");
       #else
@@ -235,14 +190,12 @@ void DHTTask(void *parameter) {
       #endif
 
       Serial.print("Average Heat Index: ");
-      Serial.print(averageHeatIndex);
+      Serial.print(heatIndexData.calculateAverage());
       #if USE_FAHRENHEIT == true
          Serial.println("F");
       #else
          Serial.println("C");
       #endif
-
-      bufferIndex++;
 
       vTaskDelay(1000 / portTICK_PERIOD_MS);
    }

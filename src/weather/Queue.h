@@ -1,5 +1,5 @@
-#ifndef QUEUE_H
-#define QUEUE_H
+#ifndef DATA_QUEUE_H // header guards breaks using QUEUE_H because another file uses QUEUE_H somewhere
+#define DATA_QUEUE_H
 
 #define DEFAULT_LENGTH 10 // default circular array length
 
@@ -55,4 +55,4 @@ class Queue {
 };
 
 
-#endif /* QUEUE_H */
+#endif /* DATA_QUEUE_H */
