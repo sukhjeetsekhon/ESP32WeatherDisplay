@@ -15,18 +15,26 @@
 #include "Arduino.h"
 #include "esp32-hal-gpio.h"
 #include <SPI.h>
+#include "math.h"
+
+// SSD1306 OLED display libraries 
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include <Adafruit_I2CDevice.h>
-#include "displayHelpers.h"
-#include "math.h"
-#include "credentials.h"
+
+// WiFi, HTTP(S), JSON libraries 
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
+
+// DHT11 sensor library
 #include "DHT.h"
+
+// local header files
+#include "displayHelpers.h"
+#include "credentials.h"
 #include "Queue.h"
 #include "api.h"
 
@@ -55,6 +63,8 @@ Queue<float> heatIndexData(DHT_QUEUE_SIZE);
 constexpr byte SDA_PIN = 21;
 constexpr byte SCL_PIN = 22;
 
+constexpr wifi_power_t WIFI_MAX_POWER = WIFI_POWER_19_5dBm; 
+
 constexpr unsigned int API_CALL_DELAY = 60000;
 constexpr unsigned int DISPLAY_REFRESH_DELAY = 1000;
 constexpr unsigned int DHT_UPDATE_DELAY = 2000;
@@ -71,14 +81,17 @@ enum DisplayPage {
    sensorDataGraph // TODO: show sensor data over time
 };
 
+DisplayPage firstPage = wifiConnection; // first page after startup finishes
+DisplayPage lastPage = sensorDataGraph; // last page after startup finishes
+
 volatile DisplayPage currentPage = startup;
 
 volatile bool isButtonPressed = false;
 
 void toggleButtonState() {
    isButtonPressed = !isButtonPressed;
-   if (currentPage == sensorDataGraph) {
-      currentPage = wifiConnection;
+   if (currentPage == lastPage) {
+      currentPage = firstPage;
    } else {
       currentPage = static_cast<DisplayPage>(static_cast<int>(currentPage) + 1);
    }
@@ -353,6 +366,8 @@ TaskHandle_t WiFiTaskHandle = NULL;
 void WiFiTask(void *parameter) {
    WiFi.disconnect(); // clear any previous WiFi connections
    WiFi.mode(WIFI_STA); // ESP32 only connects to WiFi
+
+   WiFi.setTxPower(WIFI_MAX_POWER);
 
    if (WL_CONNECTED == WiFi.begin(WIFI_SSID, WIFI_PASSWORD)) {
       Serial.println(F("WiFi Connected!"));
