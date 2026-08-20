@@ -37,14 +37,6 @@ constexpr byte DHT_PIN = 5;
 constexpr byte SDA_PIN = 21;
 constexpr byte SCL_PIN = 22;
 
-// currently unused. Uncomment if needed
-// float calculateAverage(float* buffer, unsigned int size) {
-//    float total = 0;
-//    for (int i=0;i<size;i++) {
-//       total += buffer[i];
-//    }
-//    return total / float(size);
-// }
 
 volatile bool isButtonPressed = false;
 
@@ -75,6 +67,7 @@ void DisplayTask(void *parameter) {
    constexpr byte OLED_HEIGHT = 64;
 
    int displayNumber = 0;
+   unsigned short wifiCounter = 0;
 
    Adafruit_SSD1306 display(OLED_WIDTH, OLED_HEIGHT);
 
@@ -97,11 +90,29 @@ void DisplayTask(void *parameter) {
       display.print(displayNumber);
       displayNumber++;
 
-      // draw WiFi Signal icon
+      // draw circle for WiFi signal icon
       display.fillCircle(64, 52, 3, SSD1306_WHITE);
-      drawArc(display, 64, 52, 12, 225, 315, 3);
-      drawArc(display, 64, 52, 20, 225, 315, 3);
-      drawArc(display, 64, 52, 28, 225, 315, 3);
+      // draw solid WiFi signal
+      if (WL_CONNECTED == WiFi.status()) {
+         // small arc
+         drawArc(display, 64, 52, 12, 225, 315, 3);
+         // medium arc
+         drawArc(display, 64, 52, 20, 225, 315, 3);
+         // big arc
+         drawArc(display, 64, 52, 28, 225, 315, 3);
+      } else { // draw WiFi connecting animation
+         if (wifiCounter > 2) {wifiCounter = 0;}
+         switch(wifiCounter) {
+            case 2:
+               drawArc(display, 64, 52, 28, 225, 315, 3);
+            case 1:
+               drawArc(display, 64, 52, 20, 225, 315, 3);
+            case 0:
+               drawArc(display, 64, 52, 12, 225, 315, 3);
+         }
+         wifiCounter++;
+      }
+      
 
       display.display();
 
@@ -144,7 +155,7 @@ void DHTTask(void *parameter) {
    for (;;) {
 
       // TODO: refactor DHT into another class
-      
+
       temperature = dht.readTemperature(USE_FAHRENHEIT);
       relativeHumidity = dht.readHumidity();
       heatIndex = dht.computeHeatIndex(
