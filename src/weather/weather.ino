@@ -1,10 +1,16 @@
 /**
    @file weather.ino
 
-   @brief control OLED, sensors, and button
+   @brief control OLED display, read DHT sensor data, call Open-Meteo API
 */
 
 /*
+
+   OLED Wiring:
+   3v3 -> VCC
+   GND -> GND
+   D21 -> SDA
+   D22 -> SCL
 
    Button Wiring:
    3v3 -> Button Leads 1
@@ -40,63 +46,85 @@
 
 typedef uint16_t DHTSizeType;
 
-constexpr float IMPOSSIBLE_TEMPERATURE = 200;
-constexpr float IMPOSSIBLE_HUMIDITY = 101;
-
-constexpr byte LED_PIN = 2;
-constexpr byte BUTTON_PIN = 4;
-
-#define DHT_TYPE DHT11   // DHT 11
-constexpr byte DHT_PIN = 5;
-
-#define USE_FAHRENHEIT true // must be a define to use #if
-constexpr DHTSizeType DHT_QUEUE_SIZE = 100; // a larger size will change the average values more slowly and stabilize output measurements
-
-float DHT_temperature = IMPOSSIBLE_TEMPERATURE;
-float DHT_relativeHumidity = IMPOSSIBLE_HUMIDITY;
-float DHT_heatIndex = IMPOSSIBLE_TEMPERATURE;
-
-Queue<float> temperatureData(DHT_QUEUE_SIZE);
-Queue<float> relativeHumidityData(DHT_QUEUE_SIZE);
-Queue<float> heatIndexData(DHT_QUEUE_SIZE);
-
-constexpr byte SDA_PIN = 21;
-constexpr byte SCL_PIN = 22;
-
-constexpr wifi_power_t WIFI_MAX_POWER = WIFI_POWER_19_5dBm; 
-
-constexpr unsigned int API_CALL_DELAY = 60000;
-constexpr unsigned int DISPLAY_REFRESH_DELAY = 1000;
-constexpr unsigned int DHT_UPDATE_DELAY = 2000;
-
-
-volatile float currentTemperature = IMPOSSIBLE_TEMPERATURE; // impossible value to check
-volatile float currentRelativeHumidity = IMPOSSIBLE_HUMIDITY; // impossible value to check
-
+// different pages to display on OLED with different information
 enum DisplayPage {
    startup, // TODO: show a logo and title
    wifiConnection, // TODO: make it show signal strength
    currentWeather, // TODO: show basic temperature and humidity with icons
-   sensorData, // TODO: show sensor temperature and humidity data
-   sensorDataGraph // TODO: show sensor data over time
+   sensorData,
+   sensorDataGraph // TODO: show sensor data over time as a graph or something
 };
 
-DisplayPage firstPage = wifiConnection; // first page after startup finishes
-DisplayPage lastPage = sensorDataGraph; // last page after startup finishes
+// different arcs of wifi signal icon
+enum WiFiArc {
+   shortArc,
+   mediumArc,
+   longArc
+};
+
+constexpr byte LED_PIN = 2;
+constexpr byte BUTTON_PIN = 4;
+
+// default weather data consts
+constexpr float IMPOSSIBLE_TEMPERATURE = 200; // impossible value to check as a default value
+constexpr float IMPOSSIBLE_HUMIDITY = 101; // impossible value to check as a default value
+
+// Open-Meteo weather variables
+volatile float currentTemperature = IMPOSSIBLE_TEMPERATURE;
+volatile float currentRelativeHumidity = IMPOSSIBLE_HUMIDITY;
+
+// DHT11 config
+#define USE_FAHRENHEIT true // must be a define to use #if
+constexpr DHTSizeType DHT_QUEUE_SIZE = 100; // a larger size will change the average values more slowly and stabilize output measurements
+constexpr byte DHT_PIN = 5;
+
+// DHT data variables
+float DHT_temperature = IMPOSSIBLE_TEMPERATURE;
+float DHT_relativeHumidity = IMPOSSIBLE_HUMIDITY;
+float DHT_heatIndex = IMPOSSIBLE_TEMPERATURE;
+
+// DHT data queues to hold a lot of data and easily take averages over time
+Queue<float> temperatureData(DHT_QUEUE_SIZE);
+Queue<float> relativeHumidityData(DHT_QUEUE_SIZE);
+Queue<float> heatIndexData(DHT_QUEUE_SIZE);
+
+// OLED I2C pins
+constexpr byte SDA_PIN = 21;
+constexpr byte SCL_PIN = 22;
+
+// WiFi config
+constexpr wifi_power_t WIFI_MAX_POWER = WIFI_POWER_19_5dBm; 
+
+// Task Timing config
+constexpr unsigned int API_CALL_DELAY = 60000;
+constexpr unsigned int DISPLAY_REFRESH_DELAY = 1000;
+constexpr unsigned int DHT_UPDATE_DELAY = 2000;
+
+// Page flipping config
+constexpr DisplayPage firstPage = wifiConnection; // first page after startup finishes
+constexpr DisplayPage lastPage = sensorDataGraph; // last page after startup finishes
 
 volatile DisplayPage currentPage = startup;
 
 volatile bool isButtonPressed = false;
 
+// TODO: rename toggleButtonState function to mention flipping pages
+/**
+   @brief toggle button state by pushing it down and flip display page
+*/
 void toggleButtonState() {
-   isButtonPressed = !isButtonPressed;
-   if (currentPage == lastPage) {
-      currentPage = firstPage;
-   } else {
+   isButtonPressed = !isButtonPressed; // toggle button
+   if (lastPage == currentPage) {
+      currentPage = firstPage; // wrap back to first page
+   } else { // flip to next page
       currentPage = static_cast<DisplayPage>(static_cast<int>(currentPage) + 1);
    }
 }
 
+
+
+
+// TODO: change blink task to blink after pressing button instead of toggling LED
 TaskHandle_t BlinkTaskHandle = NULL;
 
 /**
@@ -116,11 +144,11 @@ void DisplayTask(void *parameter) {
 
    constexpr bool DISPLAY_FAILED = false;
 
-   constexpr byte OLED_WIDTH = 128;
-   constexpr byte OLED_HEIGHT = 64;
+   constexpr unsigned short OLED_WIDTH = 128;
+   constexpr unsigned short OLED_HEIGHT = 64;
 
-   int displayNumber = 0;
-   unsigned short wifiCounter = 0;
+   // counter to play wifi connecting animation by adding longer signal arcs 
+   WiFiArc wifiArcCounter = shortArc;
 
    Adafruit_SSD1306 display(OLED_WIDTH, OLED_HEIGHT);
 
@@ -130,25 +158,25 @@ void DisplayTask(void *parameter) {
       Serial.println(F("Display task suspended!"));
    }
 
+   // clear display
    display.display();
    vTaskDelay(200 / portTICK_PERIOD_MS);
    display.clearDisplay();
 
-   currentPage = wifiConnection;
-
+   // play wifi connection animation
    while (WL_CONNECTED != WiFi.status()) {
       display.clearDisplay();
-      display.fillCircle(64, 52, 3, SSD1306_WHITE);
-      if (wifiCounter > 2) {wifiCounter = 0;}
-         switch(wifiCounter) {
-            case 2:
-               drawArc(display, 64, 52, 28, 225, 315, 3);
-            case 1:
-               drawArc(display, 64, 52, 20, 225, 315, 3);
-            case 0:
-               drawArc(display, 64, 52, 12, 225, 315, 3);
+      drawWiFiCircle(display);
+      if (wifiArcCounter > longArc) {wifiArcCounter = shortArc;}
+         switch(wifiArcCounter) {
+            case 2: // long arc
+               drawLongWiFiArc(display);
+            case 1: // medium arc
+               drawMediumWiFiArc(display);
+            case 0: // short arc
+               drawShortWiFiArc(display);
          }
-      wifiCounter++;
+      wifiArcCounter = static_cast<WiFiArc>(static_cast<int>(wifiArcCounter) + 1);
 
       display.display();
 
@@ -157,25 +185,20 @@ void DisplayTask(void *parameter) {
 
    display.clearDisplay();
 
-   // draw circle for WiFi signal icon
-   display.fillCircle(64, 52, 3, SSD1306_WHITE);
-   // draw solid WiFi signal
-   // small arc
-   drawArc(display, 64, 52, 12, 225, 315, 3);
-   // medium arc
-   drawArc(display, 64, 52, 20, 225, 315, 3);
-   // big arc
-   drawArc(display, 64, 52, 28, 225, 315, 3);
+   drawWiFiIcon(display);
 
    display.display();
 
-   currentPage = currentWeather;
+   vTaskDelay(3000 / portTICK_PERIOD_MS);
 
+   currentPage = currentWeather; // go to currentWeather after startup finishes
+
+   // wait for Weather Task to set variables to valid values
    while (
-      currentTemperature == IMPOSSIBLE_TEMPERATURE 
-      || currentRelativeHumidity == IMPOSSIBLE_HUMIDITY
+      IMPOSSIBLE_TEMPERATURE == currentTemperature 
+      || IMPOSSIBLE_HUMIDITY == currentRelativeHumidity
    ) {
-      vTaskDelay(3000 / portTICK_PERIOD_MS);
+      vTaskDelay(1000 / portTICK_PERIOD_MS);
    }
 
    for(;;) {
@@ -183,34 +206,29 @@ void DisplayTask(void *parameter) {
 
       switch (currentPage) {
          case startup:
+            // after finishing startup, go to wifiConnection
             currentPage = wifiConnection;
             break;
          case wifiConnection:
             if (WL_CONNECTED == WiFi.status()) {
-               // draw circle for WiFi signal icon
-               display.fillCircle(64, 52, 3, SSD1306_WHITE);
-               // draw solid WiFi signal
-               // small arc
-               drawArc(display, 64, 52, 12, 225, 315, 3);
-               // medium arc
-               drawArc(display, 64, 52, 20, 225, 315, 3);
-               // big arc
-               drawArc(display, 64, 52, 28, 225, 315, 3);
+               drawWiFiIcon(display);
             } else {
-               if (wifiCounter > 2) {
-                  wifiCounter = 0;
+               if (wifiArcCounter > longArc) {
+                  wifiArcCounter = shortArc;
                }
-               switch(wifiCounter) {
-                  case 2:
-                     drawArc(display, 64, 52, 28, 225, 315, 3);
-                  case 1:
-                     drawArc(display, 64, 52, 20, 225, 315, 3);
-                  case 0:
-                     drawArc(display, 64, 52, 12, 225, 315, 3);
+               drawWiFiCircle(display);
+               switch(wifiArcCounter) {
+                  case longArc:
+                     drawLongWiFiArc(display);
+                  case mediumArc:
+                     drawMediumWiFiArc(display);
+                  case shortArc:
+                     drawShortWiFiArc(display);
                }
-               wifiCounter++;
+               wifiArcCounter = static_cast<WiFiArc>(static_cast<int>(wifiArcCounter) + 1);
             }
             break;
+
          case sensorData:
             display.setTextSize(1);      // Normal 1:1 pixel scale
             display.setTextColor(WHITE); // Draw white text
@@ -305,8 +323,6 @@ void DisplayTask(void *parameter) {
          
       }
       
-      
-
       display.display();
 
       vTaskDelay(DISPLAY_REFRESH_DELAY / portTICK_PERIOD_MS);
@@ -318,7 +334,7 @@ TaskHandle_t DHTTaskHandle = NULL;
 void DHTTask(void *parameter) {
    
    
-   DHT dht(DHT_PIN, DHT_TYPE);
+   DHT dht(DHT_PIN, DHT11);
 
    dht.begin();
 
@@ -457,7 +473,7 @@ void setup() {
   xTaskCreatePinnedToCore(
     BlinkTask,         // Task function
     "BlinkTask",       // Task name
-    10000,             // Stack size (bytes)
+    5000,             // Stack size (bytes)
     NULL,              // Parameters
     1,                 // Priority
     &BlinkTaskHandle,  // Task handle
@@ -475,7 +491,7 @@ void setup() {
   xTaskCreatePinnedToCore(
     DHTTask,         // Task function
     "DHTTask",       // Task name
-    10000,             // Stack size (bytes)
+    5000,             // Stack size (bytes)
     NULL,              // Parameters
     1,                 // Priority
     &DHTTaskHandle,  // Task handle

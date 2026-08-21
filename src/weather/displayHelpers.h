@@ -33,4 +33,14 @@ void drawArc(
    unsigned int thickness
 );
 
+void drawShortWiFiArc(Adafruit_SSD1306 &display);
+
+void drawMediumWiFiArc(Adafruit_SSD1306 &display);
+
+void drawLongWiFiArc(Adafruit_SSD1306 &display);
+
+void drawWiFiCircle(Adafruit_SSD1306 &display);
+
+void drawWiFiIcon(Adafruit_SSD1306 &display);
+
 #endif /* DISPLAY_HELPERS_H */

@@ -69,3 +69,26 @@ void drawArc(
       );
    }
 }
+
+void drawShortWiFiArc(Adafruit_SSD1306 &display) {
+   drawArc(display, 64, 52, 12, 225, 315, 3);
+}
+
+void drawMediumWiFiArc(Adafruit_SSD1306 &display) {
+   drawArc(display, 64, 52, 20, 225, 315, 3);
+}
+
+void drawLongWiFiArc(Adafruit_SSD1306 &display) {
+   drawArc(display, 64, 52, 28, 225, 315, 3);
+}
+
+void drawWiFiCircle(Adafruit_SSD1306 &display) {
+   display.fillCircle(64, 52, 3, SSD1306_WHITE);
+}
+
+void drawWiFiIcon(Adafruit_SSD1306 &display) {
+   drawWiFiCircle(display);
+   drawShortWiFiArc(display);
+   drawMediumWiFiArc(display);
+   drawLongWiFiArc(display);
+}
