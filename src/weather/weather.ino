@@ -48,10 +48,10 @@ typedef uint16_t DHTSizeType;
 
 // different pages to display on OLED with different information
 enum DisplayPage {
-   startup, // TODO: show a logo and title
+   startup,        // TODO: show a logo and title
    wifiConnection, // TODO: make it show signal strength
    currentWeather, // TODO: show basic temperature and humidity with icons
-   sensorData,
+   sensorData,    
    sensorDataGraph // TODO: show sensor data over time as a graph or something
 };
 
@@ -471,49 +471,49 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(BUTTON_PIN), toggleButtonState, RISING);
 
   xTaskCreatePinnedToCore(
-    BlinkTask,         // Task function
-    "BlinkTask",       // Task name
-    5000,             // Stack size (bytes)
-    NULL,              // Parameters
-    1,                 // Priority
-    &BlinkTaskHandle,  // Task handle
-    1                  // Core 1
-  );
+    BlinkTask,             // Task function     
+    "BlinkTask",           // Task name         
+    5000,                  // Stack size (bytes)
+    NULL,                  // Parameters        
+    1,                     // Priority          
+    &BlinkTaskHandle,      // Task handle       
+    1                      // Core 1            
+  );                      
   xTaskCreatePinnedToCore(
-    DisplayTask,         // Task function
-    "DisplayTask",       // Task name
-    10000,             // Stack size (bytes)
-    NULL,              // Parameters
-    1,                 // Priority
-    &DisplayTaskHandle,  // Task handle
-    1                  // Core 1
-  );
+    DisplayTask,           // Task function     
+    "DisplayTask",         // Task name         
+    10000,                 // Stack size (bytes)
+    NULL,                  // Parameters        
+    1,                     // Priority          
+    &DisplayTaskHandle,    // Task handle       
+    1                      // Core 1            
+  );                      
   xTaskCreatePinnedToCore(
-    DHTTask,         // Task function
-    "DHTTask",       // Task name
-    5000,             // Stack size (bytes)
-    NULL,              // Parameters
-    1,                 // Priority
-    &DHTTaskHandle,  // Task handle
-    1                  // Core 1
-  );
+    DHTTask,               // Task function     
+    "DHTTask",             // Task name         
+    5000,                  // Stack size (bytes)
+    NULL,                  // Parameters        
+    1,                     // Priority          
+    &DHTTaskHandle,        // Task handle       
+    1                      // Core 1            
+  );                      
   xTaskCreatePinnedToCore(
-    WiFiTask,         // Task function
-    "WiFiTask",       // Task name
-    10000,             // Stack size (bytes)
-    NULL,              // Parameters
-    1,                 // Priority
-    &WiFiTaskHandle,  // Task handle
-    1                  // Core 1
-  );
+    WiFiTask,              // Task function     
+    "WiFiTask",            // Task name         
+    10000,                 // Stack size (bytes)
+    NULL,                  // Parameters        
+    1,                     // Priority          
+    &WiFiTaskHandle,       // Task handle       
+    1                      // Core 1            
+  );                      
   xTaskCreatePinnedToCore(
-    WeatherTask,         // Task function
-    "WeatherTask",       // Task name
-    10000,             // Stack size (bytes)
-    NULL,              // Parameters
-    1,                 // Priority
-    &WeatherTaskHandle,  // Task handle
-    1                  // Core 1
+    WeatherTask,           // Task function
+    "WeatherTask",         // Task name
+    10000,                 // Stack size (bytes)
+    NULL,                  // Parameters
+    1,                     // Priority
+    &WeatherTaskHandle,    // Task handle
+    1                      // Core 1
   );
 }
 
