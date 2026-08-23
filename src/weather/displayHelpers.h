@@ -65,4 +65,11 @@ void drawCurrentSensorData(
    const float heatIndex
 );
 
+void drawAverageSensorData(
+   Adafruit_SSD1306 &display,
+   const float temp, 
+   const float humidity, 
+   const float heatIndex
+);
+
 #endif /* DISPLAY_HELPERS_H */

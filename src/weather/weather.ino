@@ -221,48 +221,17 @@ void DisplayTask(void *parameter) {
             break;
             
          case averageSensorData:
-            display.setTextColor(WHITE); // Draw white text
-            display.setCursor(0, 0);     // Start at top-left corner
-
-            display.setTextSize(2);
-            display.println(F("AVERAGE"));
-            display.println(F("SENSOR"));
-
-            display.setTextSize(1);
-
-            display.print(F("Temp: "));
-            display.print(temperatureData.calculateAverage());
-
-            Serial.print(F("Average Temperature: "));
-            Serial.print(temperatureData.calculateAverage());
-            #if USE_FAHRENHEIT == true
-               Serial.println("F");
-               display.println("F");
-            #else
-               Serial.println("C");
-               display.println("C");
-            #endif
-
-            display.print(F("Humidity: "));
-            display.print(relativeHumidityData.calculateAverage());
-            display.println("%");
-
-            Serial.print(F("Average Relative Humidity: "));
-            Serial.print(relativeHumidityData.calculateAverage());
-            Serial.println("%");
-
-            display.print(F("Heat Index: "));
-            display.print(heatIndexData.calculateAverage());
-
-            Serial.print(F("Average Heat Index: "));
-            Serial.print(heatIndexData.calculateAverage());
-            #if USE_FAHRENHEIT == true
-               Serial.println("F");
-               display.println("F");
-            #else
-               Serial.println("C");
-               display.println("C");
-            #endif
+            drawAverageSensorData(
+               display, 
+               temperatureData.calculateAverage(), 
+               relativeHumidityData.calculateAverage(), 
+               heatIndexData.calculateAverage()
+            );
+            printAverageSensorData(
+               temperatureData.calculateAverage(), 
+               relativeHumidityData.calculateAverage(), 
+               heatIndexData.calculateAverage()
+            );
             break;
 
          case sensorDataGraph:

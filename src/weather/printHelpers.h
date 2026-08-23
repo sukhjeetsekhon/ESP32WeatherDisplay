@@ -7,4 +7,10 @@ void printCurrentSensorData(
    const float heatIndex
 );
 
+void printAverageSensorData(
+   const float temp, 
+   const float humidity, 
+   const float heatIndex
+);
+
 #endif /* PRINT_HELPERS_H */

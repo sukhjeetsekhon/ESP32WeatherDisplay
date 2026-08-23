@@ -27,3 +27,29 @@ void printCurrentSensorData(
       Serial.println("C");
    #endif
 }
+
+void printAverageSensorData(
+   const float temp, 
+   const float humidity, 
+   const float heatIndex
+) {
+   Serial.print(F("Average Temperature: "));
+   Serial.print(temp);
+   #if USE_FAHRENHEIT == true
+      Serial.println("F");
+   #else
+      Serial.println("C");
+   #endif
+
+   Serial.print(F("Average Relative Humidity: "));
+   Serial.print(humidity);
+   Serial.println("%");
+
+   Serial.print(F("Average Heat Index: "));
+   Serial.print(heatIndex);
+   #if USE_FAHRENHEIT == true
+      Serial.println("F");
+   #else
+      Serial.println("C");
+   #endif
+}
