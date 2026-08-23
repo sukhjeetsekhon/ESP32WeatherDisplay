@@ -51,16 +51,12 @@ enum DisplayPage {
    startup,        // TODO: show a logo and title
    wifiConnection, // TODO: make it show signal strength
    currentWeather, // TODO: show basic temperature and humidity with icons
-   sensorData,    
+   currentSensorData,  // TODO: update the current sensor page
+   averageSensorData, // TODO: create an average sensor page
    sensorDataGraph // TODO: show sensor data over time as a graph or something
 };
 
-// different arcs of wifi signal icon
-enum WiFiArc {
-   shortArc,
-   mediumArc,
-   longArc
-};
+
 
 constexpr byte LED_PIN = 2;
 constexpr byte BUTTON_PIN = 4;
@@ -94,6 +90,7 @@ constexpr byte SCL_PIN = 22;
 
 // WiFi config
 constexpr wifi_power_t WIFI_MAX_POWER = WIFI_POWER_19_5dBm; 
+long wifiStrength = 0;
 
 // Task Timing config
 constexpr unsigned int API_CALL_DELAY = 60000;
@@ -166,18 +163,7 @@ void DisplayTask(void *parameter) {
    // play wifi connection animation
    while (WL_CONNECTED != WiFi.status()) {
       display.clearDisplay();
-      drawWiFiCircle(display);
-      if (wifiArcCounter > longArc) {wifiArcCounter = shortArc;}
-         switch(wifiArcCounter) {
-            case 2: // long arc
-               drawLongWiFiArc(display);
-            case 1: // medium arc
-               drawMediumWiFiArc(display);
-            case 0: // short arc
-               drawShortWiFiArc(display);
-         }
-      wifiArcCounter = static_cast<WiFiArc>(static_cast<int>(wifiArcCounter) + 1);
-
+      playWiFiConnectionAnimation(display);
       display.display();
 
       vTaskDelay(200 / portTICK_PERIOD_MS);
@@ -210,48 +196,30 @@ void DisplayTask(void *parameter) {
             currentPage = wifiConnection;
             break;
          case wifiConnection:
+            // if the WiFi is connected, show its connection strength
             if (WL_CONNECTED == WiFi.status()) {
-               drawWiFiIcon(display);
+               wifiStrength = WiFi.RSSI();
+               drawWiFiStrength(display, wifiStrength);
             } else {
-               if (wifiArcCounter > longArc) {
-                  wifiArcCounter = shortArc;
-               }
-               drawWiFiCircle(display);
-               switch(wifiArcCounter) {
-                  case longArc:
-                     drawLongWiFiArc(display);
-                  case mediumArc:
-                     drawMediumWiFiArc(display);
-                  case shortArc:
-                     drawShortWiFiArc(display);
-               }
-               wifiArcCounter = static_cast<WiFiArc>(static_cast<int>(wifiArcCounter) + 1);
+               playWiFiConnectionAnimation(display);
             }
             break;
 
-         case sensorData:
-            display.setTextSize(1);      // Normal 1:1 pixel scale
+         case currentSensorData:
             display.setTextColor(WHITE); // Draw white text
             display.setCursor(0, 0);     // Start at top-left corner
 
-            display.print(F("Current Temp: "));
+            display.setTextSize(2);
+            display.println(F("CURRENT"));
+            display.println(F("SENSOR"));
+
+            display.setTextSize(1);
+
+            display.print(F("Temp: "));
             display.print(DHT_temperature);
 
             Serial.print(F("Current Temperature: "));
             Serial.print(DHT_temperature);
-            #if USE_FAHRENHEIT == true
-               Serial.println("F");
-               display.println("F");
-            #else
-               Serial.println("C");
-               display.println("C");
-            #endif
-
-            display.print(F("Avg Temp: "));
-            display.print(temperatureData.calculateAverage());
-
-            Serial.print(F("Average Temperature: "));
-            Serial.print(temperatureData.calculateAverage());
             #if USE_FAHRENHEIT == true
                Serial.println("F");
                display.println("F");
@@ -268,14 +236,6 @@ void DisplayTask(void *parameter) {
             Serial.print(DHT_relativeHumidity);
             Serial.println("%");
 
-            display.print(F("Avg Humidity: "));
-            display.print(relativeHumidityData.calculateAverage());
-            display.println("%");
-
-            Serial.print(F("Average Relative Humidity: "));
-            Serial.print(relativeHumidityData.calculateAverage());
-            Serial.println("%");
-
             display.print(F("Heat Index: "));
             display.print(DHT_heatIndex);
 
@@ -289,7 +249,40 @@ void DisplayTask(void *parameter) {
                display.println("C");
             #endif
 
-            display.print(F("Avg Heat Idx: "));
+            break;
+            
+         case averageSensorData:
+            display.setTextColor(WHITE); // Draw white text
+            display.setCursor(0, 0);     // Start at top-left corner
+
+            display.setTextSize(2);
+            display.println(F("AVERAGE"));
+            display.println(F("SENSOR"));
+
+            display.setTextSize(1);
+
+            display.print(F("Temp: "));
+            display.print(temperatureData.calculateAverage());
+
+            Serial.print(F("Average Temperature: "));
+            Serial.print(temperatureData.calculateAverage());
+            #if USE_FAHRENHEIT == true
+               Serial.println("F");
+               display.println("F");
+            #else
+               Serial.println("C");
+               display.println("C");
+            #endif
+
+            display.print(F("Humidity: "));
+            display.print(relativeHumidityData.calculateAverage());
+            display.println("%");
+
+            Serial.print(F("Average Relative Humidity: "));
+            Serial.print(relativeHumidityData.calculateAverage());
+            Serial.println("%");
+
+            display.print(F("Heat Index: "));
             display.print(heatIndexData.calculateAverage());
 
             Serial.print(F("Average Heat Index: "));
@@ -302,6 +295,7 @@ void DisplayTask(void *parameter) {
                display.println("C");
             #endif
             break;
+
          case sensorDataGraph:
             display.setTextSize(1);      // Normal 1:1 pixel scale
             display.setTextColor(WHITE); // Draw white text
@@ -320,7 +314,6 @@ void DisplayTask(void *parameter) {
             display.print(currentRelativeHumidity);
             display.println("%");
             break;
-         
       }
       
       display.display();
@@ -351,7 +344,10 @@ void DHTTask(void *parameter) {
    );
 
 
-   if (isnan(DHT_temperature) || isnan(DHT_relativeHumidity) || isnan(DHT_heatIndex)) {
+   if (isnan(DHT_temperature) 
+      || isnan(DHT_relativeHumidity) 
+      || isnan(DHT_heatIndex)
+   ) {
       Serial.println(F("Failed to read from DHT sensor!"));
       vTaskSuspend(DHTTaskHandle);
    }

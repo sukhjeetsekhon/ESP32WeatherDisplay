@@ -7,6 +7,17 @@
 // #include <Adafruit_BusIO.h>
 #include "math.h"
 
+#define EXCELLENT_WIFI_CONNECTION -50
+#define GOOD_WIFI_CONNECTION -70
+#define BAD_WIFI_CONNECTION -90
+
+// different arcs of wifi signal icon
+enum WiFiArc {
+   shortArc,
+   mediumArc,
+   longArc
+};
+
 /**
    @brief draw an arc on a 128x64 OLED SSD1306 display
 
@@ -42,5 +53,9 @@ void drawLongWiFiArc(Adafruit_SSD1306 &display);
 void drawWiFiCircle(Adafruit_SSD1306 &display);
 
 void drawWiFiIcon(Adafruit_SSD1306 &display);
+
+void drawWiFiStrength(Adafruit_SSD1306 &display, const long wifiStrength);
+
+void playWiFiConnectionAnimation(Adafruit_SSD1306 &display);
 
 #endif /* DISPLAY_HELPERS_H */

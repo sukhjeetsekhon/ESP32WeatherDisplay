@@ -92,3 +92,39 @@ void drawWiFiIcon(Adafruit_SSD1306 &display) {
    drawMediumWiFiArc(display);
    drawLongWiFiArc(display);
 }
+
+void drawWiFiStrength(Adafruit_SSD1306 &display, const long wifiStrength) {
+   drawWiFiCircle(display);
+   if (wifiStrength > EXCELLENT_WIFI_CONNECTION) {
+      drawLongWiFiArc(display);
+      drawMediumWiFiArc(display);
+      drawShortWiFiArc(display);
+   } else if (wifiStrength > GOOD_WIFI_CONNECTION) {
+      drawMediumWiFiArc(display);
+      drawShortWiFiArc(display);
+   } else if (wifiStrength > BAD_WIFI_CONNECTION) {
+      drawShortWiFiArc(display);
+   }
+}
+
+void playWiFiConnectionAnimation(Adafruit_SSD1306 &display) {
+   // create a counter that persists the program's lifetime
+   static WiFiArc wifiArcCounter = shortArc;
+
+
+   drawWiFiCircle(display); // always draw the WiFi circle in the icon
+   switch(wifiArcCounter) {
+      case longArc:
+         drawLongWiFiArc(display); // draw all of the arcs
+      case mediumArc:
+         drawMediumWiFiArc(display); // draw medium and short arc
+      case shortArc:
+         drawShortWiFiArc(display); // only draw the short arc
+   }
+
+   if (longArc == wifiArcCounter ) { // if the counter reached the end, reset it
+      wifiArcCounter = shortArc;
+   } else { // set wifi arc to the next size
+      wifiArcCounter = static_cast<WiFiArc>(static_cast<int>(wifiArcCounter) + 1);
+   }
+}
