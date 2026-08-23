@@ -4,8 +4,8 @@
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
-// #include <Adafruit_BusIO.h>
 #include "math.h"
+#include "config.h"
 
 #define EXCELLENT_WIFI_CONNECTION -50
 #define GOOD_WIFI_CONNECTION -70
@@ -57,5 +57,12 @@ void drawWiFiIcon(Adafruit_SSD1306 &display);
 void drawWiFiStrength(Adafruit_SSD1306 &display, const long wifiStrength);
 
 void playWiFiConnectionAnimation(Adafruit_SSD1306 &display);
+
+void drawCurrentSensorData(
+   Adafruit_SSD1306 &display, 
+   const float temp, 
+   const float humidity, 
+   const float heatIndex
+);
 
 #endif /* DISPLAY_HELPERS_H */

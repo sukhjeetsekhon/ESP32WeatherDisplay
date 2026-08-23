@@ -128,3 +128,40 @@ void playWiFiConnectionAnimation(Adafruit_SSD1306 &display) {
       wifiArcCounter = static_cast<WiFiArc>(static_cast<int>(wifiArcCounter) + 1);
    }
 }
+
+void drawCurrentSensorData(
+   Adafruit_SSD1306 &display, 
+   const float temp, 
+   const float humidity, 
+   const float heatIndex
+) {
+   display.setTextColor(WHITE); // Draw white text
+   display.setCursor(0, 0);     // Start at top-left corner
+
+   display.setTextSize(2);
+   display.println(F("CURRENT"));
+   display.println(F("SENSOR"));
+
+   display.setTextSize(1);
+
+   display.print(F("Temp: "));
+   display.print(temp);
+
+   #if USE_FAHRENHEIT == true
+      display.println("F");
+   #else
+      display.println("C");
+   #endif
+
+   display.print(F("Humidity: "));
+   display.print(humidity);
+   display.println("%");
+
+   display.print(F("Heat Index: "));
+   display.print(heatIndex);
+   #if USE_FAHRENHEIT == true
+      display.println("F");
+   #else
+      display.println("C");
+   #endif
+}

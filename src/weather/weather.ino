@@ -40,6 +40,7 @@
 
 // local header files
 #include "displayHelpers.h"
+#include "printHelpers.h"
 #include "credentials.h"
 #include "Queue.h"
 #include "api.h"
@@ -70,7 +71,6 @@ volatile float currentTemperature = IMPOSSIBLE_TEMPERATURE;
 volatile float currentRelativeHumidity = IMPOSSIBLE_HUMIDITY;
 
 // DHT11 config
-#define USE_FAHRENHEIT true // must be a define to use #if
 constexpr DHTSizeType DHT_QUEUE_SIZE = 100; // a larger size will change the average values more slowly and stabilize output measurements
 constexpr byte DHT_PIN = 5;
 
@@ -206,48 +206,17 @@ void DisplayTask(void *parameter) {
             break;
 
          case currentSensorData:
-            display.setTextColor(WHITE); // Draw white text
-            display.setCursor(0, 0);     // Start at top-left corner
-
-            display.setTextSize(2);
-            display.println(F("CURRENT"));
-            display.println(F("SENSOR"));
-
-            display.setTextSize(1);
-
-            display.print(F("Temp: "));
-            display.print(DHT_temperature);
-
-            Serial.print(F("Current Temperature: "));
-            Serial.print(DHT_temperature);
-            #if USE_FAHRENHEIT == true
-               Serial.println("F");
-               display.println("F");
-            #else
-               Serial.println("C");
-               display.println("C");
-            #endif
-
-            display.print(F("Humidity: "));
-            display.print(DHT_relativeHumidity);
-            display.println("%");
-
-            Serial.print(F("Current Relative Humidity: "));
-            Serial.print(DHT_relativeHumidity);
-            Serial.println("%");
-
-            display.print(F("Heat Index: "));
-            display.print(DHT_heatIndex);
-
-            Serial.print(F("Current Heat Index: "));
-            Serial.print(DHT_heatIndex);
-            #if USE_FAHRENHEIT == true
-               Serial.println("F");
-               display.println("F");
-            #else
-               Serial.println("C");
-               display.println("C");
-            #endif
+            drawCurrentSensorData(
+               display, 
+               DHT_temperature, 
+               DHT_relativeHumidity, 
+               DHT_heatIndex
+            );
+            printCurrentSensorData(
+               DHT_temperature, 
+               DHT_relativeHumidity, 
+               DHT_heatIndex
+            );
 
             break;
             
