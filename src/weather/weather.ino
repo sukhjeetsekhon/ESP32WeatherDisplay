@@ -52,9 +52,9 @@ enum DisplayPage {
    startup,        // TODO: show a logo and title
    wifiConnection, // TODO: make it show signal strength
    currentWeather, // TODO: show basic temperature and humidity with icons
-   currentSensorData,  // TODO: update the current sensor page
-   averageSensorData, // TODO: create an average sensor page
-   sensorDataGraph // TODO: show sensor data over time as a graph or something
+   currentSensorData,
+   averageSensorData,
+   currentSensorDataGraph,
 };
 
 
@@ -84,6 +84,7 @@ Queue<float> temperatureData(DHT_QUEUE_SIZE);
 Queue<float> relativeHumidityData(DHT_QUEUE_SIZE);
 Queue<float> heatIndexData(DHT_QUEUE_SIZE);
 
+
 // OLED I2C pins
 constexpr byte SDA_PIN = 21;
 constexpr byte SCL_PIN = 22;
@@ -95,11 +96,11 @@ long wifiStrength = 0;
 // Task Timing config
 constexpr unsigned int API_CALL_DELAY = 60000;
 constexpr unsigned int DISPLAY_REFRESH_DELAY = 1000;
-constexpr unsigned int DHT_UPDATE_DELAY = 2000;
+constexpr unsigned int DHT_UPDATE_DELAY = 1000; // 1000ms is the minimum delay between readings
 
 // Page flipping config
 constexpr DisplayPage firstPage = wifiConnection; // first page after startup finishes
-constexpr DisplayPage lastPage = sensorDataGraph; // last page after startup finishes
+constexpr DisplayPage lastPage = currentSensorDataGraph; // last page after startup finishes
 
 volatile DisplayPage currentPage = startup;
 
@@ -234,12 +235,12 @@ void DisplayTask(void *parameter) {
             );
             break;
 
-         case sensorDataGraph:
-            display.setTextSize(1);      // Normal 1:1 pixel scale
-            display.setTextColor(WHITE); // Draw white text
-            display.setCursor(0, 0);     // Start at top-left corner
-            display.println("TODO: make graph :P");
+         case currentSensorDataGraph: // TODO: displays temperature right now. Separate into more pages
+            // Scrolling live temperature graph
+            // TODO: create more pages to cycle between temperature, humidity, heatIndex graphs
+            drawSensorGraph(display, temperatureData, "Temp (Live)", "F");
             break;
+
          case currentWeather:
             display.setTextSize(1);      // Normal 1:1 pixel scale
             display.setTextColor(WHITE); // Draw white text

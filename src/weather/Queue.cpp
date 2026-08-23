@@ -145,6 +145,12 @@ T Queue<T>::getMax() {
    return max;
 }
 
+template <typename T>
+T Queue<T>::get(unsigned int logicalIndex) const {
+   // logicalIndex 0 → oldest element (front), size-1 → newest (back)
+   return circularArr[(front + logicalIndex) % length];
+}
+
 template class Queue<int>;
 template class Queue<float>;
 template class Queue<double>;

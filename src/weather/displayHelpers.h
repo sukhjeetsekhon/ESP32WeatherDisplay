@@ -6,6 +6,7 @@
 #include <Adafruit_SSD1306.h>
 #include "math.h"
 #include "config.h"
+#include "Queue.h"
 
 #define EXCELLENT_WIFI_CONNECTION -50
 #define GOOD_WIFI_CONNECTION -70
@@ -70,6 +71,13 @@ void drawAverageSensorData(
    const float temp, 
    const float humidity, 
    const float heatIndex
+);
+
+void drawSensorGraph(
+   Adafruit_SSD1306& display,
+   Queue<float>&     queue,
+   const char*       title,
+   const char*       unit
 );
 
 #endif /* DISPLAY_HELPERS_H */

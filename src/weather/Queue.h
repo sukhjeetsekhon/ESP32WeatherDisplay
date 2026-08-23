@@ -52,6 +52,9 @@ class Queue {
 
    T getMax();
 
+   T get(unsigned int logicalIndex) const;
+   
+   unsigned int getSize() const { return size; }
 };
 
 
