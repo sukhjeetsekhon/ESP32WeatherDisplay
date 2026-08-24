@@ -39,6 +39,7 @@
 #include "DHT.h"
 
 // local header files
+#include "icons.h"
 #include "displayHelpers.h"
 #include "printHelpers.h"
 #include "credentials.h"
@@ -54,7 +55,12 @@ enum DisplayPage {
    currentWeather, // TODO: show basic temperature and humidity with icons
    currentSensorData,
    averageSensorData,
-   currentSensorDataGraph,
+   drawSun, // TODO: delete these icon test pages later (delete in switch statement too)
+   drawCloud,
+   drawCloudySun,
+   drawRaincloud,
+   drawGustyWind,
+   currentSensorDataGraph, // split graph into temperature and humidity
 };
 
 
@@ -252,6 +258,21 @@ void DisplayTask(void *parameter) {
             display.print(F("Current RH: "));
             display.print(currentRelativeHumidity);
             display.println("%");
+            break;
+         case drawSun:
+            drawSunIcon(display);
+            break;
+         case drawCloud:
+            drawCloudIcon(display);
+            break;
+         case drawCloudySun:
+            drawCloudySunIcon(display);
+            break;
+         case drawRaincloud:
+            drawRaincloudIcon(display);
+            break;
+         case drawGustyWind:
+            drawGustyWindIcon(display);
             break;
       }
       
