@@ -56,16 +56,10 @@ enum DisplayPage {
    currentWeather, // TODO: show basic temperature and humidity with icons
    currentSensorData,
    averageSensorData,
-   drawSun, // TODO: delete these icon test pages later (delete in switch statement too)
-   drawCloud,
-   drawCloudySun,
-   drawRaincloud,
-   drawGustyWind,
-   drawSnowcloud,
-   drawThundercloud,
    currentSensorTemperatureGraph,
    currentSensorHumidityGraph,
-   currentSensorHeatIndexGraph
+   currentSensorHeatIndexGraph,
+   currentWeatherPage
 };
 
 
@@ -86,7 +80,7 @@ long wifiStrength = 0;
 
 // Page flipping config
 constexpr DisplayPage firstPage = wifiConnection; // first page after startup finishes
-constexpr DisplayPage lastPage = currentSensorHeatIndexGraph; // last page after startup finishes
+constexpr DisplayPage lastPage = currentWeatherPage; // last page after startup finishes
 
 volatile DisplayPage currentPage = startup;
 
@@ -168,8 +162,9 @@ void DisplayTask(void *parameter) {
 
    // wait for Weather Task to set variables to valid values
    while (
-      IMPOSSIBLE_TEMPERATURE == currentTemperature 
-      || IMPOSSIBLE_HUMIDITY == currentRelativeHumidity
+      IMPOSSIBLE_TEMPERATURE == currentTemperature || 
+      IMPOSSIBLE_HUMIDITY == currentRelativeHumidity ||
+      IMPOSSIBLE_WEATHER_CODE == weatherCode
    ) {
       vTaskDelay(1000 / portTICK_PERIOD_MS);
    }
@@ -253,26 +248,26 @@ void DisplayTask(void *parameter) {
             display.print(currentRelativeHumidity);
             display.println("%");
             break;
-         case drawSun:
-            drawSunIcon(display);
-            break;
-         case drawCloud:
-            drawCloudIcon(display);
-            break;
-         case drawCloudySun:
-            drawCloudySunIcon(display);
-            break;
-         case drawRaincloud:
-            drawRaincloudIcon(display);
-            break;
-         case drawGustyWind:
-            drawGustyWindIcon(display);
-            break;
-         case drawSnowcloud:
-            drawSnowcloudIcon(display);
-            break;
-         case drawThundercloud:
-            drawThundercloudIcon(display);
+         case currentWeatherPage:
+            if (isSunny(weatherCode)) {
+               drawSunIcon(display);
+            } else if (isCloudySun(weatherCode)) {
+               drawCloudySunIcon(display);
+            } else if (isCloudy(weatherCode)) {
+               drawCloudIcon(display);
+            } else if (isRain(weatherCode)) {
+               drawRaincloudIcon(display);
+            } else if (isThunder(weatherCode)) {
+               drawThundercloudIcon(display);
+            } else if (isSnowy(weatherCode)) {
+               drawSnowcloudIcon(display);
+            }
+
+            // TODO: change weather icons to accomodate page title
+            display.setTextSize(1);      // Normal 1:1 pixel scale
+            display.setTextColor(WHITE); // Draw white text
+            display.setCursor(0, 0);     // Start at top-left corner
+            display.println(F("Current Weather: "));
             break;
       }
       
@@ -412,6 +407,10 @@ void WeatherTask(void *parameter) {
             Serial.print(F("Humidity: "));
             Serial.println(doc["current"]["relative_humidity_2m"].as<float>());
             currentRelativeHumidity = doc["current"]["relative_humidity_2m"].as<float>();
+
+            Serial.print(F("Weather Code: "));
+            Serial.println(doc["current"]["weather_code"].as<int>());
+            weatherCode = doc["current"]["weather_code"].as<int>();
          }
       }
 
