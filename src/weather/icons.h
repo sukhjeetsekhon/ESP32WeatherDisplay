@@ -17,5 +17,7 @@ void drawCloudIcon(Adafruit_SSD1306 &display);
 void drawCloudySunIcon(Adafruit_SSD1306 &display);
 void drawRaincloudIcon(Adafruit_SSD1306 &display);
 void drawGustyWindIcon(Adafruit_SSD1306 &display);
+void drawSnowcloudIcon(Adafruit_SSD1306 &display);
+void drawThundercloudIcon(Adafruit_SSD1306 &display);
 
 #endif /* ICONS_H */

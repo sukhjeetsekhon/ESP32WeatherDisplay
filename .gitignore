@@ -1,4 +1,3 @@
 .vscode/
 src/weather/build/
-src/weather/api.h
 src/weather/credentials.h

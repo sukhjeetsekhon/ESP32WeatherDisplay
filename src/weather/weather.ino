@@ -45,8 +45,9 @@
 #include "credentials.h"
 #include "Queue.h"
 #include "api.h"
+#include "config.h"
+#include "pins.h"
 
-typedef uint16_t DHTSizeType;
 
 // different pages to display on OLED with different information
 enum DisplayPage {
@@ -60,25 +61,13 @@ enum DisplayPage {
    drawCloudySun,
    drawRaincloud,
    drawGustyWind,
-   currentSensorDataGraph, // split graph into temperature and humidity
+   drawSnowcloud,
+   drawThundercloud,
+   currentSensorTemperatureGraph,
+   currentSensorHumidityGraph,
+   currentSensorHeatIndexGraph
 };
 
-
-
-constexpr byte LED_PIN = 2;
-constexpr byte BUTTON_PIN = 4;
-
-// default weather data consts
-constexpr float IMPOSSIBLE_TEMPERATURE = 200; // impossible value to check as a default value
-constexpr float IMPOSSIBLE_HUMIDITY = 101; // impossible value to check as a default value
-
-// Open-Meteo weather variables
-volatile float currentTemperature = IMPOSSIBLE_TEMPERATURE;
-volatile float currentRelativeHumidity = IMPOSSIBLE_HUMIDITY;
-
-// DHT11 config
-constexpr DHTSizeType DHT_QUEUE_SIZE = 100; // a larger size will change the average values more slowly and stabilize output measurements
-constexpr byte DHT_PIN = 5;
 
 // DHT data variables
 float DHT_temperature = IMPOSSIBLE_TEMPERATURE;
@@ -90,23 +79,14 @@ Queue<float> temperatureData(DHT_QUEUE_SIZE);
 Queue<float> relativeHumidityData(DHT_QUEUE_SIZE);
 Queue<float> heatIndexData(DHT_QUEUE_SIZE);
 
-
-// OLED I2C pins
-constexpr byte SDA_PIN = 21;
-constexpr byte SCL_PIN = 22;
-
 // WiFi config
 constexpr wifi_power_t WIFI_MAX_POWER = WIFI_POWER_19_5dBm; 
 long wifiStrength = 0;
 
-// Task Timing config
-constexpr unsigned int API_CALL_DELAY = 60000;
-constexpr unsigned int DISPLAY_REFRESH_DELAY = 1000;
-constexpr unsigned int DHT_UPDATE_DELAY = 1000; // 1000ms is the minimum delay between readings
 
 // Page flipping config
 constexpr DisplayPage firstPage = wifiConnection; // first page after startup finishes
-constexpr DisplayPage lastPage = currentSensorDataGraph; // last page after startup finishes
+constexpr DisplayPage lastPage = currentSensorHeatIndexGraph; // last page after startup finishes
 
 volatile DisplayPage currentPage = startup;
 
@@ -241,10 +221,24 @@ void DisplayTask(void *parameter) {
             );
             break;
 
-         case currentSensorDataGraph: // TODO: displays temperature right now. Separate into more pages
-            // Scrolling live temperature graph
-            // TODO: create more pages to cycle between temperature, humidity, heatIndex graphs
-            drawSensorGraph(display, temperatureData, "Temp (Live)", "F");
+         case currentSensorTemperatureGraph: // scrolling graph of temperature
+            #if USE_FAHRENHEIT == true
+               drawSensorGraph(display, temperatureData, "Temp (Live)", "F");
+            #else
+               drawSensorGraph(display, temperatureData, "Temp (Live)", "C");
+            #endif
+            break;
+
+         case currentSensorHumidityGraph: // scrolling graph of humidity
+            drawSensorGraph(display, relativeHumidityData, "Humidity (Live)", "%");
+            break;
+
+         case currentSensorHeatIndexGraph: // scrolling graph of heat index
+            #if USE_FAHRENHEIT == true
+               drawSensorGraph(display, heatIndexData, "Heat Index (Live)", "F");
+            #else
+               drawSensorGraph(display, heatIndexData, "Heat Index (Live)", "C");
+            #endif
             break;
 
          case currentWeather:
@@ -273,6 +267,12 @@ void DisplayTask(void *parameter) {
             break;
          case drawGustyWind:
             drawGustyWindIcon(display);
+            break;
+         case drawSnowcloud:
+            drawSnowcloudIcon(display);
+            break;
+         case drawThundercloud:
+            drawThundercloudIcon(display);
             break;
       }
       
