@@ -352,3 +352,32 @@ void drawWeatherInfo(Adafruit_SSD1306 &display, const float temp, const float hu
    display.print(humidity);
    display.println("%");
 }
+
+void drawTemperature(Adafruit_SSD1306 &display, const float temp) {
+
+   // thermometer icon
+   display.drawCircle(10, 48, 5, 1);
+   display.drawRect(7, 9, 7, 35, 1);
+   display.drawLine(8, 43, 12, 43, 0);
+   display.drawCircle(10, 9, 3, 1);
+   display.fillRect(8, 9, 5, 4, 0);
+   display.drawLine(12, 43, 11, 43, 1);
+   display.drawLine(12, 35, 11, 35, 1);
+   display.drawLine(12, 27, 11, 27, 1);
+   display.drawLine(12, 19, 11, 19, 1);
+   display.drawLine(12, 12, 11, 12, 1);
+
+   // display temperature
+   display.setTextColor(1);
+   display.setTextSize(2);
+   display.setTextWrap(false);
+   display.setCursor(35, 25);
+   display.print(temp);
+   #if USE_FAHRENHEIT == true
+      display.println("F");
+   #else
+      display.println("C");
+   #endif
+   display.display();
+
+}

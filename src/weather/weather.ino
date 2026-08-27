@@ -54,6 +54,7 @@ enum DisplayPage {
    startup,        // TODO: show a logo and title
    wifiConnection, // TODO: make it show signal strength
    currentWeather, // TODO: show basic temperature and humidity with icons
+   weatherTemperature,
    currentSensorData,
    averageSensorData,
    currentSensorTemperatureGraph,
@@ -185,6 +186,10 @@ void DisplayTask(void *parameter) {
             } else {
                playWiFiConnectionAnimation(display);
             }
+            break;
+
+         case weatherTemperature:
+            drawTemperature(display, currentTemperature);
             break;
 
          case currentSensorData:
