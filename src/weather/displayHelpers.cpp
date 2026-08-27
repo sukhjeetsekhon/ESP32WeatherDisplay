@@ -332,3 +332,23 @@ void drawSensorGraph(
 
    display.display();
 }
+
+void drawWeatherInfo(Adafruit_SSD1306 &display, const float temp, const float humidity) {
+   display.setTextColor(WHITE); // Draw white text
+   display.setCursor(0, 0);     // Start at top-left corner
+
+   display.setTextSize(2);
+   
+   display.println("CURRENT");
+   display.println("WEATHER");
+
+   display.setTextSize(1);
+
+   display.print(F("Temp: "));
+   display.print(temp);
+   display.println("F");
+
+   display.print(F("Humidity: "));
+   display.print(humidity);
+   display.println("%");
+}

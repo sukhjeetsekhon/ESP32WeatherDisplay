@@ -237,16 +237,7 @@ void DisplayTask(void *parameter) {
             break;
 
          case currentWeather:
-            display.setTextSize(1);      // Normal 1:1 pixel scale
-            display.setTextColor(WHITE); // Draw white text
-            display.setCursor(0, 0);     // Start at top-left corner
-            display.print(F("Current Temp: "));
-            display.print(currentTemperature);
-            display.println("F");
-
-            display.print(F("Current RH: "));
-            display.print(currentRelativeHumidity);
-            display.println("%");
+            drawWeatherInfo(display, currentTemperature, currentRelativeHumidity);
             break;
          case currentWeatherPage:
             if (isSunny(weatherCode)) {

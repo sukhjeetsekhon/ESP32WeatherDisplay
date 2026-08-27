@@ -80,4 +80,6 @@ void drawSensorGraph(
    const char*       unit
 );
 
+void drawWeatherInfo(Adafruit_SSD1306 &display, const float temp, const float humidity);
+
 #endif /* DISPLAY_HELPERS_H */
